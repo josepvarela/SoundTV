@@ -1,4 +1,4 @@
-# 📺 Twitch TV App para Samsung Tizen
+# 📺 SoundTV App para Samsung Tizen
 
 Una aplicación no oficial de Twitch optimizada para **Smart TVs Samsung (Tizen OS)**, con una interfaz oscura diseñada para navegar cómodamente con el control remoto.
 
