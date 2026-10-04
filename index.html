@@ -34,3 +34,40 @@
     <script src="app.js"></script>
 </body>
 </html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Twitch TV App</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- API de Tizen para el control remoto -->
+    <script src="$WEBAPIS/webapis/webapis.js"></script>
+</head>
+<body>
+    <!-- Menú Lateral -->
+    <div class="sidebar">
+        <ul id="sidebar-menu">
+            <li class="active" data-section="followed">Seguidos</li>
+            <li data-section="games">Juegos Seguidos</li>
+            <li data-section="past">Transmisiones Pasadas</li>
+            <li data-section="channels">Canales Seguidos</li>
+            <li data-section="top">Juegos Populares</li>
+            <li data-section="settings">Configuración</li>
+        </ul>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="main-content">
+        <header>
+            <h1 id="viewer-count">Cargando...</h1>
+        </header>
+
+        <!-- Cuadrícula de Streams -->
+        <div class="stream-grid" id="stream-container">
+            <!-- JavaScript inyectará las tarjetas aquí -->
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
