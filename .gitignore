@@ -1,18 +1,12 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# Credenciales y secretos
+config.js
+.env
 
-# Other files and folders
+# Archivos de Tizen Studio
+.tizen/
+.project
 .settings/
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
-
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# Sistema
+.DS_Store
+Thumbs.db
