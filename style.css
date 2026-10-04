@@ -57,3 +57,27 @@ body {
 .stream-info {
     padding: 10px;
 }
+/* --- Estilos existentes se mantienen --- */
+
+/* FOCO: elemento seleccionado con el mando */
+.stream-card:focus,
+.sidebar li:focus {
+    outline: 4px solid #9147ff;
+    outline-offset: 2px;
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+    z-index: 10;
+}
+
+/* Eliminar el outline por defecto del navegador */
+.stream-card, .sidebar li {
+    outline: none;
+}
+
+/* Estado activo del sidebar */
+.sidebar li.active {
+    color: #9147ff;
+    font-weight: bold;
+    border-left: 4px solid #9147ff;
+    padding-left: 6px;
+}
