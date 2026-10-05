@@ -92,14 +92,8 @@ async function fetchUserInfo() {
 }
 
 function loginWithTwitch() {
-    const redirectUri = window.location.origin;
-    const scopes = 'user:read:follows';
-    const url = `https://id.twitch.tv/oauth2/authorize` +
-        `?client_id=${CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&response_type=token` +
-        `&scope=${scopes}`;
-    window.location.href = url;
+    // Redirigir al endpoint de login server-side
+    window.location.href = '/api/twitch-login';
 }
 
 function logout() {
