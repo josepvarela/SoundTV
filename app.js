@@ -1,20 +1,14 @@
 // ==========================================
-// SoundTV - Lógica principal
+// SoundTV - Lógica principal (versión corregida)
 // ==========================================
 
-let TOKEN = null;            // Token de la app (Client Credentials)
+let TOKEN = null;
 let CLIENT_ID = null;
-let USER_TOKEN = null;       // Token del usuario (OAuth)
-let USER_INFO = null;        // Datos del usuario logueado
+let USER_TOKEN = null;
+let USER_INFO = null;
 let focusableElements = [];
 let currentFocusIndex = 0;
 let currentSection = 'followed';
-
-// Canales de ejemplo (para cuando NO hay login)
-const SAMPLE_CHANNELS = [
-    'forsen', 'quin69', 'lirik', 'myth',
-    'summit1g', 'sodapoppin', 'xqc', 'tarik'
-];
 
 // ==========================================
 // 1. INICIALIZACIÓN
@@ -22,8 +16,8 @@ const SAMPLE_CHANNELS = [
 window.onload = async function () {
     registerRemoteKeys();
     setupSidebarNavigation();
-    await checkOAuthRedirect();  // Procesa el token si viene del login
     await initApp();
+    await checkOAuthRedirect();
     updateUserArea();
 };
 
@@ -36,7 +30,7 @@ async function initApp() {
         TOKEN = data.token;
         CLIENT_ID = data.clientId;
 
-        // Cargar la sección por defecto
+        // NO cargar la sección aquí; esperar a checkOAuthRedirect()
         await loadSection('followed');
     } catch (err) {
         console.error('Error iniciando SoundTV:', err);
@@ -45,31 +39,33 @@ async function initApp() {
 }
 
 // ==========================================
-// 2. OAUTH CON TWITCH
+// 2. OAUTH - Manejo robusto de errores
 // ==========================================
 async function checkOAuthRedirect() {
-    // El token viene en el hash de la URL: #access_token=xxx
+    // 1. Si viene token en el hash (#access_token=xxx)
     if (window.location.hash.includes('access_token')) {
         const params = new URLSearchParams(window.location.hash.substring(1));
         USER_TOKEN = params.get('access_token');
 
         if (USER_TOKEN) {
             localStorage.setItem('soundtv_user_token', USER_TOKEN);
-            // Limpiar el hash de la URL
             history.replaceState(null, '', window.location.pathname);
-            // Obtener info del usuario
-            await fetchUserInfo();
         }
     } else {
-        // Intentar recuperar de sesión anterior
+        // 2. Intentar recuperar de sesión anterior
         USER_TOKEN = localStorage.getItem('soundtv_user_token');
-        if (USER_TOKEN) {
-            await fetchUserInfo();
-            if (!USER_INFO) {
-                // Token expirado o inválido
-                USER_TOKEN = null;
-                localStorage.removeItem('soundtv_user_token');
-            }
+    }
+
+    // 3. Si tenemos un token, validarlo
+    if (USER_TOKEN) {
+        const valid = await fetchUserInfo();
+
+        if (!valid) {
+            // Token inválido o expirado → limpiar
+            console.warn('Token de usuario inválido, limpiando...');
+            USER_TOKEN = null;
+            USER_INFO = null;
+            localStorage.removeItem('soundtv_user_token');
         }
     }
 }
@@ -82,17 +78,32 @@ async function fetchUserInfo() {
                 'Authorization': `Bearer ${USER_TOKEN}`
             }
         });
+
+        // 401 = token inválido
+        if (res.status === 401) {
+            return false;
+        }
+
+        if (!res.ok) {
+            console.error('Error fetching user info:', res.status);
+            return false;
+        }
+
         const data = await res.json();
+
         if (data.data && data.data.length > 0) {
             USER_INFO = data.data[0];
+            return true;
         }
+
+        return false;
     } catch (err) {
         console.error('Error obteniendo info de usuario:', err);
+        return false;
     }
 }
 
 function loginWithTwitch() {
-    // Redirigir al endpoint de login server-side
     window.location.href = '/api/twitch-login';
 }
 
@@ -105,10 +116,11 @@ function logout() {
 }
 
 // ==========================================
-// 3. UI DEL USUARIO (arriba a la derecha)
+// 3. UI DEL USUARIO
 // ==========================================
 function updateUserArea() {
     const area = document.getElementById('user-area');
+    if (!area) return;
 
     if (USER_INFO) {
         area.innerHTML = `
@@ -125,6 +137,7 @@ function updateUserArea() {
         `;
         document.getElementById('login-btn').onclick = loginWithTwitch;
     }
+    refreshFocusableElements();
 }
 
 // ==========================================
@@ -139,7 +152,7 @@ function registerRemoteKeys() {
             ]);
         }
     } catch (e) {
-        console.warn('Tizen no disponible');
+        console.warn('Tizen no disponible (navegador)');
     }
 }
 
@@ -160,7 +173,7 @@ document.addEventListener('keydown', function (e) {
 function refreshFocusableElements() {
     focusableElements = Array.from(
         document.querySelectorAll(
-            '.stream-card:not([style*="display: none"]), #sidebar-menu li, .login-btn, .logout-btn'
+            '.stream-card, #sidebar-menu li, .login-btn, .logout-btn'
         )
     );
 }
@@ -239,7 +252,7 @@ function goBack() {
 }
 
 // ==========================================
-// 6. SIDEBAR Y SECCIONES
+// 6. SIDEBAR
 // ==========================================
 function setupSidebarNavigation() {
     document.querySelectorAll('#sidebar-menu li').forEach(item => {
@@ -260,7 +273,6 @@ async function loadSection(section) {
     const loading = document.getElementById('loading');
     const title = document.getElementById('page-title');
 
-    // Títulos por sección
     const titles = {
         followed: 'Seguidos',
         games: 'Juegos Seguidos',
@@ -274,10 +286,9 @@ async function loadSection(section) {
     container.innerHTML = '';
     loading.style.display = 'block';
 
-    // Secciones que requieren login
     const loginRequired = ['followed', 'games', 'past', 'channels'];
 
-    if (loginRequired.includes(section) && !USER_TOKEN) {
+    if (loginRequired.includes(section) && (!USER_TOKEN || !USER_INFO)) {
         showLoginRequired();
         return;
     }
@@ -314,7 +325,7 @@ function showLoginRequired() {
     `;
     document.getElementById('login-required-btn').onclick = loginWithTwitch;
     refreshFocusableElements();
-    document.getElementById('login-required-btn').focus();
+    document.getElementById('login-required-btn')?.focus();
 }
 
 function showMessage(text) {
@@ -322,17 +333,22 @@ function showMessage(text) {
     const loading = document.getElementById('loading');
     loading.style.display = 'none';
     container.innerHTML = `<div class="login-required"><p>${text}</p></div>`;
+    refreshFocusableElements();
 }
 
 // ==========================================
-// 7. CARGAR STREAMS (requiere login)
+// 7. CARGAR STREAMS SEGUIDOS
 // ==========================================
 async function loadFollowedStreams() {
-    const container = document.getElementById('stream-container');
     const loading = document.getElementById('loading');
 
+    // Verificación defensiva
+    if (!USER_INFO || !USER_INFO.id) {
+        showLoginRequired();
+        return;
+    }
+
     try {
-        // 1. Obtener los canales que el usuario sigue
         const followsRes = await fetch(
             `https://api.twitch.tv/helix/channels/followed?user_id=${USER_INFO.id}&first=20`,
             {
@@ -342,15 +358,21 @@ async function loadFollowedStreams() {
                 }
             }
         );
+
+        if (followsRes.status === 401) {
+            // Token expiró entre medio
+            logout();
+            return;
+        }
+
         const followsData = await followsRes.json();
-        const followedIds = followsData.data.map(f => f.broadcaster_id);
+        const followedIds = followsData.data?.map(f => f.broadcaster_id) || [];
 
         if (followedIds.length === 0) {
             showMessage('No sigues a ningún canal todavía.');
             return;
         }
 
-        // 2. Obtener los streams en vivo de esos canales
         const query = followedIds.slice(0, 20).map(id => `user_id=${id}`).join('&');
         const streamsRes = await fetch(
             `https://api.twitch.tv/helix/streams?${query}`,
@@ -381,11 +403,14 @@ async function loadFollowedStreams() {
 // 8. TRANSMISIONES PASADAS
 // ==========================================
 async function loadPastStreams() {
-    const container = document.getElementById('stream-container');
     const loading = document.getElementById('loading');
 
+    if (!USER_INFO || !USER_INFO.id) {
+        showLoginRequired();
+        return;
+    }
+
     try {
-        // 1. Obtener canales seguidos
         const followsRes = await fetch(
             `https://api.twitch.tv/helix/channels/followed?user_id=${USER_INFO.id}&first=20`,
             {
@@ -396,14 +421,13 @@ async function loadPastStreams() {
             }
         );
         const followsData = await followsRes.json();
-        const followedIds = followsData.data.map(f => f.broadcaster_id);
+        const followedIds = followsData.data?.map(f => f.broadcaster_id) || [];
 
         if (followedIds.length === 0) {
             showMessage('No sigues a ningún canal todavía.');
             return;
         }
 
-        // 2. Obtener últimos videos de cada canal (máx 5 canales para no exceder límites)
         const allVideos = [];
         for (const id of followedIds.slice(0, 5)) {
             const videosRes = await fetch(
@@ -416,9 +440,7 @@ async function loadPastStreams() {
                 }
             );
             const videosData = await videosRes.json();
-            if (videosData.data) {
-                allVideos.push(...videosData.data);
-            }
+            if (videosData.data) allVideos.push(...videosData.data);
         }
 
         if (allVideos.length === 0) {
@@ -436,7 +458,7 @@ async function loadPastStreams() {
 }
 
 // ==========================================
-// 9. TOP STREAMS (no requiere login)
+// 9. TOP STREAMS
 // ==========================================
 async function loadTopStreams() {
     const loading = document.getElementById('loading');
@@ -461,7 +483,7 @@ async function loadTopStreams() {
 }
 
 // ==========================================
-// 10. RENDERIZADO DE TARJETAS
+// 10. RENDERIZADO
 // ==========================================
 function renderStreamCards(streams) {
     const container = document.getElementById('stream-container');
@@ -501,7 +523,6 @@ function renderVideoCards(videos) {
         card.className = 'stream-card';
         card.tabIndex = 0;
         card.dataset.channel = video.user_login;
-        card.dataset.videoId = video.id;
         card.innerHTML = `
             <img src="${video.thumbnail_url.replace('%{width}', '440').replace('%{height}', '248')}"
                  alt="${video.title}"
