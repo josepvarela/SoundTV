@@ -1,5 +1,5 @@
 // ==========================================
-// SoundTV - Lógica principal (versión corregida)
+// SoundTV - app.js (versión final corregida)
 // ==========================================
 
 let TOKEN = null;
@@ -13,25 +13,16 @@ let currentSection = 'followed';
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
-// ==========================================
-// 1. INICIALIZACIÓN (ORDEN CORREGIDO)
-// ==========================================
 window.onload = async function () {
     registerRemoteKeys();
     setupSidebarNavigation();
 
-    // 1. PRIMERO cargar el token de la app
     await initApp();
-
-    // 2. DESPUÉS procesar el login del usuario
     await checkOAuthRedirect();
-
-    // 3. Actualizar la UI del usuario (avatar/nombre)
     updateUserArea();
-
-    // 4. FINALMENTE cargar la sección (ahora sí con USER_INFO actualizado)
     await loadSection(currentSection);
 };
+
 async function initApp() {
     try {
         const res = await fetch('/api/twitch-token');
@@ -40,9 +31,6 @@ async function initApp() {
         const data = await res.json();
         TOKEN = data.token;
         CLIENT_ID = data.clientId;
-
-        // ❌ ELIMINAR ESTA LÍNEA:
-        // await loadSection('followed');
     } catch (err) {
         console.error('Error iniciando SoundTV:', err);
         showMessage('⚠️ Error al cargar. Verifica las credenciales en Vercel.');
@@ -50,10 +38,9 @@ async function initApp() {
 }
 
 // ==========================================
-// 2. OAUTH - Manejo robusto de errores
+// 2. OAUTH
 // ==========================================
 async function checkOAuthRedirect() {
-    // 1. Si viene token en el hash (#access_token=xxx)
     if (window.location.hash.includes('access_token')) {
         const params = new URLSearchParams(window.location.hash.substring(1));
         USER_TOKEN = params.get('access_token');
@@ -63,17 +50,12 @@ async function checkOAuthRedirect() {
             history.replaceState(null, '', window.location.pathname);
         }
     } else {
-        // 2. Intentar recuperar de sesión anterior
         USER_TOKEN = localStorage.getItem('soundtv_user_token');
     }
 
-    // 3. Si tenemos un token, validarlo
     if (USER_TOKEN) {
         const valid = await fetchUserInfo();
-
         if (!valid) {
-            // Token inválido o expirado → limpiar
-            console.warn('Token de usuario inválido, limpiando...');
             USER_TOKEN = null;
             USER_INFO = null;
             localStorage.removeItem('soundtv_user_token');
@@ -90,23 +72,14 @@ async function fetchUserInfo() {
             }
         });
 
-        // 401 = token inválido
-        if (res.status === 401) {
-            return false;
-        }
-
-        if (!res.ok) {
-            console.error('Error fetching user info:', res.status);
-            return false;
-        }
+        if (res.status === 401) return false;
+        if (!res.ok) return false;
 
         const data = await res.json();
-
         if (data.data && data.data.length > 0) {
             USER_INFO = data.data[0];
             return true;
         }
-
         return false;
     } catch (err) {
         console.error('Error obteniendo info de usuario:', err);
@@ -118,12 +91,12 @@ function loginWithTwitch() {
     window.location.href = '/api/twitch-login';
 }
 
-function  {
+function logout() {
     USER_TOKEN = null;
     USER_INFO = null;
     localStorage.removeItem('soundtv_user_token');
     updateUserArea();
-    loadSection('followed');
+    loadSection(currentSection);
 }
 
 // ==========================================
@@ -134,25 +107,23 @@ function updateUserArea() {
     if (!area) return;
 
     if (USER_INFO) {
-        area.innerHTML = `
-            <div class="user-info">
-                <img src="${USER_INFO.profile_image_url}" alt="avatar">
-                <span>${USER_INFO.display_name}</span>
-                <button class="logout-btn" id="logout-btn">Salir</button>
-            </div>
-        `;
+        area.innerHTML =
+            '<div class="user-info">' +
+                '<img src="' + USER_INFO.profile_image_url + '" alt="avatar">' +
+                '<span>' + USER_INFO.display_name + '</span>' +
+                '<button class="logout-btn" id="logout-btn">Salir</button>' +
+            '</div>';
         document.getElementById('logout-btn').onclick = logout;
     } else {
-        area.innerHTML = `
-            <button class="login-btn" id="login-btn">Iniciar sesión con Twitch</button>
-        `;
+        area.innerHTML =
+            '<button class="login-btn" id="login-btn">Iniciar sesión con Twitch</button>';
         document.getElementById('login-btn').onclick = loginWithTwitch;
     }
     refreshFocusableElements();
 }
 
 // ==========================================
-// 4. CONTROL REMOTO (Tizen)
+// 4. CONTROL REMOTO
 // ==========================================
 function registerRemoteKeys() {
     try {
@@ -163,7 +134,7 @@ function registerRemoteKeys() {
             ]);
         }
     } catch (e) {
-        console.warn('Tizen no disponible (navegador)');
+        console.warn('Tizen no disponible');
     }
 }
 
@@ -179,7 +150,7 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ==========================================
-// 5. NAVEGACIÓN ESPACIAL
+// 5. NAVEGACIÓN
 // ==========================================
 function refreshFocusableElements() {
     focusableElements = Array.from(
@@ -193,7 +164,7 @@ function navigate(direction) {
     if (focusableElements.length === 0) return;
 
     if (!document.activeElement ||
-        !focusableElements.includes(document.activeElement)) {
+        focusableElements.indexOf(document.activeElement) === -1) {
         currentFocusIndex = 0;
         focusableElements[0].focus();
         return;
@@ -206,7 +177,7 @@ function navigate(direction) {
     let bestCandidate = null;
     let bestDistance = Infinity;
 
-    focusableElements.forEach((el, idx) => {
+    focusableElements.forEach(function (el, idx) {
         if (el === current) return;
         const rect = el.getBoundingClientRect();
         const distance = getDistance(currentRect, rect, direction);
@@ -246,7 +217,7 @@ function selectCurrent() {
     if (!el) return;
 
     if (el.classList.contains('stream-card')) {
-        window.location.href = `player.html?channel=${el.dataset.channel}`;
+        window.location.href = 'player.html?channel=' + el.dataset.channel;
     } else if (el.dataset.section) {
         handleSidebarClick(el.dataset.section);
     } else if (el.id === 'login-btn') {
@@ -257,7 +228,7 @@ function selectCurrent() {
 }
 
 function goBack() {
-    if (window.location.pathname.includes('player.html')) {
+    if (window.location.pathname.indexOf('player.html') !== -1) {
         window.location.href = 'index.html';
     }
 }
@@ -266,14 +237,16 @@ function goBack() {
 // 6. SIDEBAR
 // ==========================================
 function setupSidebarNavigation() {
-    document.querySelectorAll('#sidebar-menu li').forEach(item => {
-        item.addEventListener('click', () => handleSidebarClick(item.dataset.section));
+    document.querySelectorAll('#sidebar-menu li').forEach(function (item) {
+        item.addEventListener('click', function () {
+            handleSidebarClick(item.dataset.section);
+        });
     });
 }
 
 function handleSidebarClick(section) {
     currentSection = section;
-    document.querySelectorAll('#sidebar-menu li').forEach(li => {
+    document.querySelectorAll('#sidebar-menu li').forEach(function (li) {
         li.classList.toggle('active', li.dataset.section === section);
     });
     loadSection(section);
@@ -299,26 +272,19 @@ async function loadSection(section) {
 
     const loginRequired = ['followed', 'games', 'past', 'channels'];
 
-    if (loginRequired.includes(section) && (!USER_TOKEN || !USER_INFO)) {
+    if (loginRequired.indexOf(section) !== -1 && (!USER_TOKEN || !USER_INFO)) {
         showLoginRequired();
         return;
     }
 
-    switch (section) {
-        case 'followed':
-            await loadFollowedStreams();
-            break;
-        case 'top':
-            await loadTopStreams();
-            break;
-        case 'past':
-            await loadPastStreams();
-            break;
-        case 'games':
-        case 'channels':
-        case 'settings':
-            showMessage('🚧 Esta sección estará disponible pronto.');
-            break;
+    if (section === 'followed') {
+        await loadFollowedStreams();
+    } else if (section === 'top') {
+        await loadTopStreams();
+    } else if (section === 'past') {
+        await loadPastStreams();
+    } else {
+        showMessage('🚧 Esta sección estará disponible pronto.');
     }
 }
 
@@ -327,23 +293,24 @@ function showLoginRequired() {
     const loading = document.getElementById('loading');
     loading.style.display = 'none';
 
-    container.innerHTML = `
-        <div class="login-required">
-            <h2>🔒 Inicia sesión para continuar</h2>
-            <p>Necesitas iniciar sesión con Twitch para ver tus canales seguidos.</p>
-            <button class="login-btn" id="login-required-btn">Iniciar sesión con Twitch</button>
-        </div>
-    `;
+    container.innerHTML =
+        '<div class="login-required">' +
+            '<h2>🔒 Inicia sesión para continuar</h2>' +
+            '<p>Necesitas iniciar sesión con Twitch para ver tus canales seguidos.</p>' +
+            '<button class="login-btn" id="login-required-btn">Iniciar sesión con Twitch</button>' +
+        '</div>';
     document.getElementById('login-required-btn').onclick = loginWithTwitch;
     refreshFocusableElements();
-    document.getElementById('login-required-btn')?.focus();
+    if (document.getElementById('login-required-btn')) {
+        document.getElementById('login-required-btn').focus();
+    }
 }
 
 function showMessage(text) {
     const container = document.getElementById('stream-container');
     const loading = document.getElementById('loading');
     loading.style.display = 'none';
-    container.innerHTML = `<div class="login-required"><p>${text}</p></div>`;
+    container.innerHTML = '<div class="login-required"><p>' + text + '</p></div>';
     refreshFocusableElements();
 }
 
@@ -353,7 +320,6 @@ function showMessage(text) {
 async function loadFollowedStreams() {
     const loading = document.getElementById('loading');
 
-    // Verificación defensiva
     if (!USER_INFO || !USER_INFO.id) {
         showLoginRequired();
         return;
@@ -361,36 +327,41 @@ async function loadFollowedStreams() {
 
     try {
         const followsRes = await fetch(
-            `https://api.twitch.tv/helix/channels/followed?user_id=${USER_INFO.id}&first=20`,
+            'https://api.twitch.tv/helix/channels/followed?user_id=' +
+            USER_INFO.id + '&first=20',
             {
                 headers: {
                     'Client-ID': CLIENT_ID,
-                    'Authorization': `Bearer ${USER_TOKEN}`
+                    'Authorization': 'Bearer ' + USER_TOKEN
                 }
             }
         );
 
         if (followsRes.status === 401) {
-            // Token expiró entre medio
             logout();
             return;
         }
 
         const followsData = await followsRes.json();
-        const followedIds = followsData.data?.map(f => f.broadcaster_id) || [];
+        const followedIds = (followsData.data || []).map(function (f) {
+            return f.broadcaster_id;
+        });
 
         if (followedIds.length === 0) {
             showMessage('No sigues a ningún canal todavía.');
             return;
         }
 
-        const query = followedIds.slice(0, 20).map(id => `user_id=${id}`).join('&');
+        const query = followedIds.slice(0, 20).map(function (id) {
+            return 'user_id=' + id;
+        }).join('&');
+
         const streamsRes = await fetch(
-            `https://api.twitch.tv/helix/streams?${query}`,
+            'https://api.twitch.tv/helix/streams?' + query,
             {
                 headers: {
                     'Client-ID': CLIENT_ID,
-                    'Authorization': `Bearer ${USER_TOKEN}`
+                    'Authorization': 'Bearer ' + USER_TOKEN
                 }
             }
         );
@@ -423,16 +394,19 @@ async function loadPastStreams() {
 
     try {
         const followsRes = await fetch(
-            `https://api.twitch.tv/helix/channels/followed?user_id=${USER_INFO.id}&first=20`,
+            'https://api.twitch.tv/helix/channels/followed?user_id=' +
+            USER_INFO.id + '&first=20',
             {
                 headers: {
                     'Client-ID': CLIENT_ID,
-                    'Authorization': `Bearer ${USER_TOKEN}`
+                    'Authorization': 'Bearer ' + USER_TOKEN
                 }
             }
         );
         const followsData = await followsRes.json();
-        const followedIds = followsData.data?.map(f => f.broadcaster_id) || [];
+        const followedIds = (followsData.data || []).map(function (f) {
+            return f.broadcaster_id;
+        });
 
         if (followedIds.length === 0) {
             showMessage('No sigues a ningún canal todavía.');
@@ -440,18 +414,25 @@ async function loadPastStreams() {
         }
 
         const allVideos = [];
-        for (const id of followedIds.slice(0, 5)) {
+        const subset = followedIds.slice(0, 5);
+
+        for (let i = 0; i < subset.length; i++) {
             const videosRes = await fetch(
-                `https://api.twitch.tv/helix/videos?user_id=${id}&first=3&type=archive`,
+                'https://api.twitch.tv/helix/videos?user_id=' +
+                subset[i] + '&first=3&type=archive',
                 {
                     headers: {
                         'Client-ID': CLIENT_ID,
-                        'Authorization': `Bearer ${USER_TOKEN}`
+                        'Authorization': 'Bearer ' + USER_TOKEN
                     }
                 }
             );
             const videosData = await videosRes.json();
-            if (videosData.data) allVideos.push(...videosData.data);
+            if (videosData.data) {
+                videosData.data.forEach(function (v) {
+                    allVideos.push(v);
+                });
+            }
         }
 
         if (allVideos.length === 0) {
@@ -480,7 +461,7 @@ async function loadTopStreams() {
             {
                 headers: {
                     'Client-ID': CLIENT_ID,
-                    'Authorization': `Bearer ${TOKEN}`
+                    'Authorization': 'Bearer ' + TOKEN
                 }
             }
         );
@@ -500,56 +481,54 @@ function renderStreamCards(streams) {
     const container = document.getElementById('stream-container');
     container.innerHTML = '';
 
-    streams.forEach(stream => {
+    streams.forEach(function (stream) {
         const card = document.createElement('div');
         card.className = 'stream-card';
         card.tabIndex = 0;
         card.dataset.channel = stream.user_login;
-        card.innerHTML = `
-            <img src="${stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')}"
-                 alt="${stream.user_name}"
-                 onerror="this.src='https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg'">
-            <div class="stream-info">
-                <h3>${stream.user_name}</h3>
-                <p>${stream.game_name || 'Sin categoría'}</p>
-                <span>🔴 ${stream.viewer_count.toLocaleString()} espectadores</span>
-            </div>
-        `;
-        card.addEventListener('click', () => {
-            window.location.href = `player.html?channel=${stream.user_login}`;
+        card.innerHTML =
+            '<img src="' + stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248') + '"' +
+            ' alt="' + stream.user_name + '"' +
+            ' onerror="this.src=\'https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg\'">' +
+            '<div class="stream-info">' +
+                '<h3>' + stream.user_name + '</h3>' +
+                '<p>' + (stream.game_name || 'Sin categoría') + '</p>' +
+                '<span>🔴 ' + stream.viewer_count.toLocaleString() + ' espectadores</span>' +
+            '</div>';
+        card.addEventListener('click', function () {
+            window.location.href = 'player.html?channel=' + stream.user_login;
         });
         container.appendChild(card);
     });
 
     refreshFocusableElements();
-    focusableElements[0]?.focus();
+    if (focusableElements[0]) focusableElements[0].focus();
 }
 
 function renderVideoCards(videos) {
     const container = document.getElementById('stream-container');
     container.innerHTML = '';
 
-    videos.forEach(video => {
+    videos.forEach(function (video) {
         const card = document.createElement('div');
         card.className = 'stream-card';
         card.tabIndex = 0;
         card.dataset.channel = video.user_login;
-        card.innerHTML = `
-            <img src="${video.thumbnail_url.replace('%{width}', '440').replace('%{height}', '248')}"
-                 alt="${video.title}"
-                 onerror="this.src='https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg'">
-            <div class="stream-info">
-                <h3>${video.user_name}</h3>
-                <p>${video.title}</p>
-                <span>⏱️ ${video.duration} · ${video.created_at.substring(0, 10)}</span>
-            </div>
-        `;
-        card.addEventListener('click', () => {
+        card.innerHTML =
+            '<img src="' + video.thumbnail_url.replace('%{width}', '440').replace('%{height}', '248') + '"' +
+            ' alt="' + video.title + '"' +
+            ' onerror="this.src=\'https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg\'">' +
+            '<div class="stream-info">' +
+                '<h3>' + video.user_name + '</h3>' +
+                '<p>' + video.title + '</p>' +
+                '<span>⏱️ ' + video.duration + ' · ' + video.created_at.substring(0, 10) + '</span>' +
+            '</div>';
+        card.addEventListener('click', function () {
             window.open(video.url, '_blank');
         });
         container.appendChild(card);
     });
 
     refreshFocusableElements();
-    focusableElements[0]?.focus();
+    if (focusableElements[0]) focusableElements[0].focus();
 }
