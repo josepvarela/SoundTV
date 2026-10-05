@@ -13,14 +13,25 @@ let currentSection = 'followed';
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
+// ==========================================
+// 1. INICIALIZACIÓN (ORDEN CORREGIDO)
+// ==========================================
 window.onload = async function () {
     registerRemoteKeys();
     setupSidebarNavigation();
-    await initApp();
-    await checkOAuthRedirect();
-    updateUserArea();
-};
 
+    // 1. PRIMERO cargar el token de la app
+    await initApp();
+
+    // 2. DESPUÉS procesar el login del usuario
+    await checkOAuthRedirect();
+
+    // 3. Actualizar la UI del usuario (avatar/nombre)
+    updateUserArea();
+
+    // 4. FINALMENTE cargar la sección (ahora sí con USER_INFO actualizado)
+    await loadSection(currentSection);
+};
 async function initApp() {
     try {
         const res = await fetch('/api/twitch-token');
@@ -30,8 +41,8 @@ async function initApp() {
         TOKEN = data.token;
         CLIENT_ID = data.clientId;
 
-        // NO cargar la sección aquí; esperar a checkOAuthRedirect()
-        await loadSection('followed');
+        // ❌ ELIMINAR ESTA LÍNEA:
+        // await loadSection('followed');
     } catch (err) {
         console.error('Error iniciando SoundTV:', err);
         showMessage('⚠️ Error al cargar. Verifica las credenciales en Vercel.');
@@ -107,7 +118,7 @@ function loginWithTwitch() {
     window.location.href = '/api/twitch-login';
 }
 
-function logout() {
+function  {
     USER_TOKEN = null;
     USER_INFO = null;
     localStorage.removeItem('soundtv_user_token');
