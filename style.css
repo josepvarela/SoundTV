@@ -1,4 +1,22 @@
 /* ============================================
+   SoundTV - Estilos principales
+   ============================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #0e0e10;
+    color: #efeff1;
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ============================================
    LOGO DE SOUNDTV
    ============================================ */
 .sidebar-logo {
@@ -15,7 +33,6 @@
     height: 42px;
     border-radius: 10px;
     object-fit: contain;
-    /* Un sutil glow morado para resaltar */
     box-shadow: 0 0 12px rgba(145, 71, 255, 0.4);
 }
 
@@ -24,4 +41,196 @@
     font-weight: bold;
     color: #9147ff;
     letter-spacing: 0.5px;
+}
+
+/* ============================================
+   SIDEBAR (Menú lateral)
+   ============================================ */
+.sidebar {
+    width: 260px;
+    background-color: #18181b;
+    padding: 24px 12px;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+#sidebar-menu {
+    list-style: none;
+}
+
+#sidebar-menu li {
+    padding: 14px 12px;
+    font-size: 17px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    outline: none;
+    transition: background 0.15s ease;
+    border-left: 4px solid transparent;
+    color: #efeff1;
+}
+
+#sidebar-menu li:hover,
+#sidebar-menu li:focus {
+    background-color: #26262c;
+    border-left-color: #9147ff;
+}
+
+#sidebar-menu li.active {
+    color: #9147ff;
+    font-weight: bold;
+    background-color: #1f1f23;
+    border-left-color: #9147ff;
+}
+
+/* ============================================
+   CONTENIDO PRINCIPAL
+   ============================================ */
+.main-content {
+    flex: 1;
+    padding: 24px 32px;
+    overflow-y: auto;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.top-bar h1 {
+    font-size: 24px;
+    font-weight: 500;
+    color: #efeff1;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #00f593;
+    box-shadow: 0 0 8px #00f593;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ============================================
+   CUADRÍCULA DE STREAMS
+   ============================================ */
+.stream-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.stream-card {
+    background-color: #1f1f23;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    outline: none;
+    border: 3px solid transparent;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.stream-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+
+.stream-info {
+    padding: 12px;
+}
+
+.stream-info h3 {
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: #efeff1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stream-info p {
+    font-size: 13px;
+    color: #adadb8;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stream-info span {
+    font-size: 12px;
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+/* ============================================
+   FOCO (Control remoto)
+   ============================================ */
+.stream-card:focus {
+    border-color: #9147ff;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(145, 71, 255, 0.6);
+    z-index: 10;
+}
+
+#sidebar-menu li:focus {
+    background-color: #26262c;
+}
+
+/* ============================================
+   MENSAJE DE CARGA
+   ============================================ */
+.loading-message {
+    text-align: center;
+    padding: 40px;
+    color: #adadb8;
+    font-size: 18px;
+}
+
+/* ============================================
+   REPRODUCTOR (player.html)
+   ============================================ */
+.player-body {
+    background-color: #000;
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#twitchPlayer {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.player-back-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 100;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1400px) {
+    .stream-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
