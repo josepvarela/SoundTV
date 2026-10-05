@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://soundtv.app/samsung"
+        version="1.0.0"
+        viewmodes="maximized">
+
+    <!-- Nombre de la app que verá el usuario -->
+    <tizen:application id="SoundTV.App"
+                       package="SoundTV"
+                       required_version="2.3"/>
+
+    <!-- Nombre corto y largo -->
+    <name>SoundTV</name>
+    <tizen:profile name="tv-samsung"/>
+
+    <!-- Icono de la app (el que se muestra en el menú de Samsung) -->
+    <icon src="icon.png"/>
+
+    <!-- Descripción -->
+    <description>Aplicación no oficial de Twitch para Samsung TV</description>
+
+    <!-- Acceso a internet (obligatorio para la API de Twitch) -->
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+
+    <!-- Punto de entrada: index.html -->
+    <content src="index.html"/>
+
+    <!-- Configuración para TV -->
+    <tizen:setting screen-orientation="landscape"
+                   context-menu="disable"
+                   background-support="disable"
+                   encryption="disable"
+                   install-location="auto"
+                   hwkey-event="enable"/>
+
+    <!-- Versión mínima de Tizen requerida -->
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+</widget>

@@ -1,75 +1,41 @@
-const CLIENT_ID = 'TU_CLIENT_ID_AQUI';
-const ACCESS_TOKEN = 'TU_TOKEN_AQUI'; // Normalmente se obtiene via OAuth
-
-// Función para obtener los streams seguidos (simulado)
-async function getFollowedStreams() {
-    // En una app real, aquí llamarías a la API de Twitch: 
-    // GET https://api.twitch.tv/helix/streams/followed
-    
-    // Datos de ejemplo basados en tus capturas (forsen, Quin69, LIRIK)
-    const mockData = [
-        { user_name: 'forsen', game_name: 'Counter-Strike', viewers: 17083, thumbnail_url: 'url_imagen' },
-        { user_name: 'Quin69', game_name: 'Path of Exile', viewers: 5000, thumbnail_url: 'url_imagen' },
-        { user_name: 'LIRIK', game_name: 'Just Chatting', viewers: 25000, thumbnail_url: 'url_imagen' }
-    ];
-
-    const container = document.getElementById('stream-container');
-    
-    mockData.forEach(stream => {
-        const card = document.createElement('div');
-        card.className = 'stream-card';
-        card.innerHTML = `
-            <img src="${stream.thumbnail_url}" alt="Stream">
-            <div class="stream-info">
-                <h3>${stream.user_name}</h3>
-                <p>${stream.game_name}</p>
-                <span>🔴 ${stream.viewers} espectadores</span>
-            </div>
-        `;
-        // Al hacer clic, abrir el reproductor
-        card.onclick = () => openPlayer(stream.user_name);
-        container.appendChild(card);
-    });
-}
-
-function openPlayer(channelName) {
-    // Redirigir a la página del reproductor con el nombre del canal
-    window.location.href = `player.html?channel=${channelName}`;
-}
-
-// Inicializar
-window.onload = getFollowedStreams;
 // ==========================================
-// VARIABLES GLOBALES
+// SoundTV - Lógica principal
 // ==========================================
+
 let TOKEN = null;
 let CLIENT_ID = null;
-let focusableElements = [];       // Elementos navegables
-let currentFocusIndex = 0;        // Índice del elemento con foco
+let focusableElements = [];
+let currentFocusIndex = 0;
 
-// Lista de canales de ejemplo (puedes cargarla desde la API de "followed")
-const SAMPLE_CHANNELS = ['forsen', 'quin69', 'lirik', 'myth', 'summit1g', 'sodapoppin'];
+const SAMPLE_CHANNELS = [
+    'forsen', 'quin69', 'lirik', 'myth',
+    'summit1g', 'sodapoppin', 'xqc', 'tarik'
+];
 
 // ==========================================
 // 1. INICIALIZACIÓN
 // ==========================================
 window.onload = async function () {
     registerRemoteKeys();
+    setupSidebarNavigation();
     await initApp();
 };
 
 async function initApp() {
     try {
-        // 1. Obtener token desde la función serverless de Vercel
         const res = await fetch('/api/twitch-token');
+        if (!res.ok) throw new Error('Error obteniendo token');
+
         const data = await res.json();
         TOKEN = data.token;
         CLIENT_ID = data.clientId;
 
-        // 2. Cargar streams reales
         await loadStreams(SAMPLE_CHANNELS);
+        document.getElementById('loading').style.display = 'none';
     } catch (err) {
-        console.error('Error iniciando app:', err);
+        console.error('Error iniciando SoundTV:', err);
+        document.getElementById('loading').textContent =
+            '⚠️ Error al cargar streams. Verifica las credenciales en Vercel.';
     }
 }
 
@@ -78,25 +44,25 @@ async function initApp() {
 // ==========================================
 function registerRemoteKeys() {
     try {
-        tizen.tvinputdevice.registerKeyBatch([
-            'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop',
-            'MediaRewind', 'MediaFastForward'
-        ]);
+        if (typeof tizen !== 'undefined' && tizen.tvinputdevice) {
+            tizen.tvinputdevice.registerKeyBatch([
+                'MediaPlayPause', 'MediaPlay', 'MediaPause',
+                'MediaStop', 'MediaRewind', 'MediaFastForward'
+            ]);
+        }
     } catch (e) {
-        console.warn('Tizen no disponible (probablemente en navegador)');
+        console.warn('Tizen no disponible (modo navegador)');
     }
 }
 
 document.addEventListener('keydown', function (e) {
     switch (e.keyCode) {
-        case 37: navigate('left'); break;    // Izquierda
-        case 38: navigate('up'); break;      // Arriba
-        case 39: navigate('right'); break;   // Derecha
-        case 40: navigate('down'); break;    // Abajo
-        case 13: selectCurrent(); break;     // Enter
-        case 10009: goBack(); break;         // Back
-        case 415: playStream(); break;       // Play
-        case 19: pauseStream(); break;       // Pause
+        case 37: navigate('left'); e.preventDefault(); break;
+        case 38: navigate('up'); e.preventDefault(); break;
+        case 39: navigate('right'); e.preventDefault(); break;
+        case 40: navigate('down'); e.preventDefault(); break;
+        case 13: selectCurrent(); e.preventDefault(); break;
+        case 10009: goBack(); break;
     }
 });
 
@@ -105,15 +71,24 @@ document.addEventListener('keydown', function (e) {
 // ==========================================
 function refreshFocusableElements() {
     focusableElements = Array.from(
-        document.querySelectorAll('.stream-card, .sidebar li')
+        document.querySelectorAll('.stream-card:not([style*="display: none"]), #sidebar-menu li')
     );
 }
 
 function navigate(direction) {
     if (focusableElements.length === 0) return;
 
+    if (!document.activeElement ||
+        !focusableElements.includes(document.activeElement)) {
+        currentFocusIndex = 0;
+        focusableElements[0].focus();
+        return;
+    }
+
+    currentFocusIndex = focusableElements.indexOf(document.activeElement);
     const current = focusableElements[currentFocusIndex];
     const currentRect = current.getBoundingClientRect();
+
     let bestCandidate = null;
     let bestDistance = Infinity;
 
@@ -130,6 +105,10 @@ function navigate(direction) {
     if (bestCandidate !== null) {
         currentFocusIndex = bestCandidate;
         focusableElements[currentFocusIndex].focus();
+        focusableElements[currentFocusIndex].scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        });
     }
 }
 
@@ -141,7 +120,6 @@ function getDistance(from, to, direction) {
     const dx = toCenterX - centerX;
     const dy = toCenterY - centerY;
 
-    // Verifica que el candidato esté en la dirección correcta
     if (direction === 'left' && dx > -5) return null;
     if (direction === 'right' && dx < 5) return null;
     if (direction === 'up' && dy > -5) return null;
@@ -151,15 +129,14 @@ function getDistance(from, to, direction) {
 }
 
 function selectCurrent() {
-    const el = focusableElements[currentFocusIndex];
+    const el = document.activeElement;
     if (!el) return;
 
     if (el.classList.contains('stream-card')) {
         const channel = el.dataset.channel;
         window.location.href = `player.html?channel=${channel}`;
-    } else {
-        // Es un ítem del sidebar
-        el.click();
+    } else if (el.dataset.section) {
+        handleSidebarClick(el.dataset.section);
     }
 }
 
@@ -170,61 +147,155 @@ function goBack() {
 }
 
 // ==========================================
-// 4. CARGAR STREAMS REALES DE TWITCH
+// 4. SIDEBAR
+// ==========================================
+function setupSidebarNavigation() {
+    const menuItems = document.querySelectorAll('#sidebar-menu li');
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            handleSidebarClick(item.dataset.section);
+        });
+    });
+}
+
+function handleSidebarClick(section) {
+    document.querySelectorAll('#sidebar-menu li').forEach(li => {
+        li.classList.toggle('active', li.dataset.section === section);
+    });
+
+    switch (section) {
+        case 'followed':
+            loadStreams(SAMPLE_CHANNELS);
+            break;
+        case 'top':
+            loadTopStreams();
+            break;
+        default:
+            console.log('Sección:', section);
+    }
+}
+
+// ==========================================
+// 5. CARGAR STREAMS
 // ==========================================
 async function loadStreams(channelNames) {
     const container = document.getElementById('stream-container');
     container.innerHTML = '';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').textContent = 'Cargando streams...';
 
     const query = channelNames.map(c => `user_login=${c}`).join('&');
 
-    const response = await fetch(
-        `https://api.twitch.tv/helix/streams?${query}`,
-        {
-            headers: {
-                'Client-ID': CLIENT_ID,
-                'Authorization': `Bearer ${TOKEN}`
+    try {
+        const response = await fetch(
+            `https://api.twitch.tv/helix/streams?${query}&first=20`,
+            {
+                headers: {
+                    'Client-ID': CLIENT_ID,
+                    'Authorization': `Bearer ${TOKEN}`
+                }
             }
+        );
+
+        const data = await response.json();
+
+        if (!data.data || data.data.length === 0) {
+            document.getElementById('loading').textContent =
+                'Ningún canal está en vivo ahora mismo.';
+            return;
         }
-    );
 
-    const data = await response.json();
+        const totalViewers = data.data.reduce((sum, s) => sum + s.viewer_count, 0);
+        document.getElementById('viewer-count').textContent =
+            `Espectadores Totales: ${totalViewers.toLocaleString()}`;
 
-    // Actualizar contador total de espectadores
-    const totalViewers = data.data.reduce((sum, s) => sum + s.viewer_count, 0);
-    document.getElementById('viewer-count').textContent =
-        `Espectadores Totales: ${totalViewers.toLocaleString()}`;
+        data.data.forEach(stream => {
+            const card = document.createElement('div');
+            card.className = 'stream-card';
+            card.tabIndex = 0;
+            card.dataset.channel = stream.user_login;
+            card.innerHTML = `
+                <img src="${stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')}"
+                     alt="${stream.user_name}"
+                     onerror="this.src='https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg'">
+                <div class="stream-info">
+                    <h3>${stream.user_name}</h3>
+                    <p>${stream.game_name || 'Sin categoría'}</p>
+                    <span>🔴 ${stream.viewer_count.toLocaleString()} espectadores</span>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                window.location.href = `player.html?channel=${stream.user_login}`;
+            });
+            container.appendChild(card);
+        });
 
-    // Crear tarjetas
-    data.data.forEach(stream => {
-        const card = document.createElement('div');
-        card.className = 'stream-card';
-        card.tabIndex = 0; // Hacer el elemento focusable
-        card.dataset.channel = stream.user_login;
-        card.innerHTML = `
-            <img src="${stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')}" alt="${stream.user_name}">
-            <div class="stream-info">
-                <h3>${stream.user_name}</h3>
-                <p>${stream.game_name}</p>
-                <span>🔴 ${stream.viewer_count.toLocaleString()} espectadores</span>
-            </div>
-        `;
-        container.appendChild(card);
-    });
+        document.getElementById('loading').style.display = 'none';
+        refreshFocusableElements();
 
-    refreshFocusableElements();
-    focusableElements[0]?.focus();
+        if (focusableElements.length > 0) {
+            currentFocusIndex = 0;
+            focusableElements[0].focus();
+        }
+
+    } catch (err) {
+        console.error('Error cargando streams en SoundTV:', err);
+        document.getElementById('loading').textContent =
+            '⚠️ Error al cargar streams.';
+    }
 }
 
 // ==========================================
-// 5. CONTROLES DE REPRODUCCIÓN (player.html)
+// 6. TOP STREAMS
 // ==========================================
-function playStream() {
-    const video = document.getElementById('videoPlayer');
-    if (video) video.play();
-}
+async function loadTopStreams() {
+    const container = document.getElementById('stream-container');
+    container.innerHTML = '';
+    document.getElementById('loading').style.display = 'block';
 
-function pauseStream() {
-    const video = document.getElementById('videoPlayer');
-    if (video) video.pause();
+    try {
+        const response = await fetch(
+            'https://api.twitch.tv/helix/streams?first=20',
+            {
+                headers: {
+                    'Client-ID': CLIENT_ID,
+                    'Authorization': `Bearer ${TOKEN}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        const totalViewers = data.data.reduce((sum, s) => sum + s.viewer_count, 0);
+        document.getElementById('viewer-count').textContent =
+            `Top Streams - ${totalViewers.toLocaleString()} espectadores`;
+
+        data.data.forEach(stream => {
+            const card = document.createElement('div');
+            card.className = 'stream-card';
+            card.tabIndex = 0;
+            card.dataset.channel = stream.user_login;
+            card.innerHTML = `
+                <img src="${stream.thumbnail_url.replace('{width}', '440').replace('{height}', '248')}"
+                     alt="${stream.user_name}"
+                     onerror="this.src='https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg'">
+                <div class="stream-info">
+                    <h3>${stream.user_name}</h3>
+                    <p>${stream.game_name || 'Sin categoría'}</p>
+                    <span>🔴 ${stream.viewer_count.toLocaleString()} espectadores</span>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                window.location.href = `player.html?channel=${stream.user_login}`;
+            });
+            container.appendChild(card);
+        });
+
+        document.getElementById('loading').style.display = 'none';
+        refreshFocusableElements();
+        focusableElements[0]?.focus();
+
+    } catch (err) {
+        console.error(err);
+    }
 }

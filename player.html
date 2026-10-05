@@ -1,35 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Reproductor Twitch</title>
+    <title>SoundTV - Reproductor</title>
     <link rel="stylesheet" href="style.css">
-    <script src="$WEBAPIS/webapis/webapis.js"></script>
+    <script src="$WEBAPIS/webapis/webapis.js" onerror="console.warn('Tizen no disponible')"></script>
 </head>
 <body class="player-body">
     <iframe
         id="twitchPlayer"
         src=""
         allowfullscreen
-        frameborder="0">
+        frameborder="0"
+        scrolling="no">
     </iframe>
+
+    <div class="player-back-hint">← Pulsa ATRÁS para volver a SoundTV</div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const channel = urlParams.get('channel') || 'forsen';
-
-        // ⚠️ Reemplaza 'tu-app.vercel.app' por tu dominio real
         const parent = window.location.hostname;
 
         document.getElementById('twitchPlayer').src =
-            `https://player.twitch.tv/?channel=${channel}&parent=${parent}&autoplay=true`;
+            `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}` +
+            `&parent=${parent}` +
+            `&autoplay=true` +
+            `&muted=false`;
 
-        // Botón Atrás del mando
         document.addEventListener('keydown', function (e) {
             if (e.keyCode === 10009) {
                 window.location.href = 'index.html';
             }
         });
+
+        try {
+            if (typeof tizen !== 'undefined' && tizen.tvinputdevice) {
+                tizen.tvinputdevice.registerKeyBatch([
+                    'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop'
+                ]);
+            }
+        } catch (err) {
+            console.warn('Tizen no disponible');
+        }
     </script>
 </body>
 </html>

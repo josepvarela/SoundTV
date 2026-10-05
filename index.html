@@ -1,72 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Twitch TV App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundTV</title>
+    <link rel="icon" type="image/png" href="icon.png">
     <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <!-- Menú Lateral (Sidebar) -->
-    <div class="sidebar">
-        <div class="search-icon">🔍</div>
-        <ul>
-            <li class="active">Seguidos (11)</li>
-            <li>Juegos Seguidos (21)</li>
-            <li>Transmisiones Pasadas</li>
-            <li>Canales Seguidos (147)</li>
-            <li>Juegos Populares</li>
-            <li>Configuración</li>
-        </ul>
-    </div>
-
-    <!-- Contenido Principal -->
-    <div class="main-content">
-        <header>
-            <h1>Espectadores Totales: 4,675,886</h1>
-        </header>
-
-        <!-- Cuadrícula de Streams (Imagen 5) -->
-        <div class="stream-grid" id="stream-container">
-            <!-- Aquí JavaScript inyectará las tarjetas de stream -->
-        </div>
-    </div>
-
-    <script src="app.js"></script>
-</body>
-</html>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Twitch TV App</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- API de Tizen para el control remoto -->
-    <script src="$WEBAPIS/webapis/webapis.js"></script>
+    <script src="$WEBAPIS/webapis/webapis.js" onerror="console.warn('Tizen no disponible')"></script>
 </head>
 <body>
     <!-- Menú Lateral -->
-    <div class="sidebar">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="icon.png" alt="SoundTV Logo" class="logo-img">
+            <span class="logo-text">SoundTV</span>
+        </div>
         <ul id="sidebar-menu">
-            <li class="active" data-section="followed">Seguidos</li>
-            <li data-section="games">Juegos Seguidos</li>
-            <li data-section="past">Transmisiones Pasadas</li>
-            <li data-section="channels">Canales Seguidos</li>
-            <li data-section="top">Juegos Populares</li>
-            <li data-section="settings">Configuración</li>
+            <li class="active" data-section="followed" tabindex="0">Seguidos</li>
+            <li data-section="games" tabindex="0">Juegos Seguidos</li>
+            <li data-section="past" tabindex="0">Transmisiones Pasadas</li>
+            <li data-section="channels" tabindex="0">Canales Seguidos</li>
+            <li data-section="top" tabindex="0">Juegos Populares</li>
+            <li data-section="settings" tabindex="0">Configuración</li>
         </ul>
-    </div>
+    </aside>
 
     <!-- Contenido Principal -->
-    <div class="main-content">
-        <header>
+    <main class="main-content">
+        <header class="top-bar">
             <h1 id="viewer-count">Cargando...</h1>
+            <span class="status-dot" id="status"></span>
         </header>
 
-        <!-- Cuadrícula de Streams -->
-        <div class="stream-grid" id="stream-container">
-            <!-- JavaScript inyectará las tarjetas aquí -->
-        </div>
-    </div>
+        <section class="stream-grid" id="stream-container"></section>
+
+        <div id="loading" class="loading-message">Cargando streams de Twitch...</div>
+    </main>
 
     <script src="app.js"></script>
 </body>
